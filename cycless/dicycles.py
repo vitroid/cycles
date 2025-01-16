@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
+from typing import Generator, Iterable
+
 import numpy as np
 import networkx as nx
-from typing import Generator
+
+from cycless.cycles import cycles_iter
+
 
 # for a directed graph
 
@@ -39,7 +43,7 @@ def dicycles_iter(
         """
         The `_find` function recursively searches for all cycles of a specified size in a directed graph and
         returns them as tuples.
-        
+
         Args:
           digraph: a directed graph. It can be represented as a
         dictionary of dictionaries or a networkx DiGraph object. It contains information about the
@@ -78,6 +82,37 @@ def dicycles_iter(
 
     for head in digraph.nodes():
         yield from _find(digraph, [head], size)
+
+
+def cycle_orientations_iter(
+    digraph: nx.DiGraph, maxsize: int, pos: np.ndarray = None
+) -> Generator[tuple, None, None]:
+    """有向グラフを無向グラフとみなしてサイクルをさがし、サイクルとその上の有向辺の向きを返す。
+
+    Args:
+        digraph (nx.DiGraph): 有向グラフ
+        maxsize (int): サイクルの最大サイズ
+        pos (np.ndarray, optional): 頂点のセル相対座標。これが与えられた場合は、
+            周期境界を跨がないサイクルだけを調査する. Defaults to None.
+
+    Yields:
+        Generator[tuple, None, None]: _description_
+    """
+
+    def orientations(path: Iterable, digraph: nx.DiGraph) -> list:
+        """与えられたパスまたはサイクルの向きの有向辺があるかどうかを、boolのリストで返す
+
+        Args:
+            path (Iterable): 頂点ラベルのリスト
+            digraph (nx.DiGraph): もとの有向グラフ
+
+        Returns:
+            list: 辺の向き
+        """
+        return [digraph.has_edge(path[i - 1], path[i]) for i in range(len(path))]
+
+    for cycle in cycles_iter(nx.Graph(digraph), maxsize, pos):
+        yield cycle, orientations(cycle, digraph)
 
 
 def test():
