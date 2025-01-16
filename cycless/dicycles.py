@@ -4,6 +4,7 @@ from typing import Generator, Iterable
 
 import numpy as np
 import networkx as nx
+import click
 
 from cycless.cycles import cycles_iter
 
@@ -115,12 +116,22 @@ def cycle_orientations_iter(
         yield cycle, orientations(cycle, digraph)
 
 
-def test():
+@click.command()
+@click.option("-d", "--debug", is_flag=True)
+def test(debug):
     """
     「test」関数は格子グラフを生成し、グラフ内の周期境界条件 (PBC) に準拠しているサイクル数と準拠していないサイクル数を計算します。
     """
     import random
+    from logging import getLogger, basicConfig, INFO, DEBUG
 
+    if debug:
+        basicConfig(level=DEBUG)
+    else:
+        basicConfig(level=INFO)
+    logger = getLogger()
+
+    logger.info("Self-test mode")
     random.seed(1)
     dg = nx.DiGraph()
     # a lattice graph of 4x4x4
@@ -145,21 +156,31 @@ def test():
                     dg.add_edge(b, a, vec=-d)
     # PBC-compliant
     A = set([cycle for cycle in dicycles_iter(dg, 4, vec=True)])
-    print(f"Number of cycles (PBC compliant): {len(A)}")
-    print(A)
+    logger.debug(f"Number of cycles (PBC compliant): {len(A)}")
+    logger.debug(A)
     assert len(A) == 25
+    logger.info("Test 1 Pass")
 
     # not PBC-compliant
     B = set([cycle for cycle in dicycles_iter(dg, 4)])
-    print(f"Number of cycles (crude)        : {len(B)}")
-    print(B)
+    logger.debug(f"Number of cycles (crude)        : {len(B)}")
+    logger.debug(B)
     assert len(B) == 33
+    logger.info("Test 2 Pass")
 
     # difference
     C = B - A
-    print("Cycles that span the cell:")
-    print(C)
+    logger.debug("Cycles that span the cell:")
+    logger.debug(C)
     assert len(C) == 8
+    logger.info("Test 3 Pass")
+
+    # undirected cycles
+    D = [cycle_ori for cycle_ori in cycle_orientations_iter(dg, 4)]
+    logger.debug(f"Number of cycles (crude)        : {len(D)}")
+    logger.debug(D)
+    assert len(D) == 240
+    logger.info("Test 4 Pass")
 
 
 if __name__ == "__main__":
